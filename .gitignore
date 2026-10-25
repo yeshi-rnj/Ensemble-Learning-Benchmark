@@ -16,3 +16,6 @@ reports/figures/*
 !reports/figures/.gitkeep
 
 .venv/
+!reports/figures/roc_curves.png
+!reports/figures/tuned_metrics.png
+!reports/figures/feature_importance_top15.png
