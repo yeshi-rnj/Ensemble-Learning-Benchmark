@@ -1,16 +1,18 @@
 """Run the complete benchmark and export reproducible artifacts."""
-from pathlib import Path
+
 import json
 import platform
-import time
+from pathlib import Path
+
 import pandas as pd
 import sklearn
 import xgboost
+
 from .data import load_data
-from .models import build_models
-from .tuning import tune_models
 from .evaluation import evaluate_model
 from .importance import compare_importances
+from .models import build_models
+from .tuning import tune_models
 from .visualization import create_plots
 
 
@@ -22,9 +24,9 @@ def run_benchmark(output_root="reports", quick=False, random_state=42):
     figures_dir.mkdir(parents=True, exist_ok=True)
 
     X_train, X_test, y_train, y_test, features = load_data(random_state=random_state)
-    baseline_models, tuned_models, searches = tune_models(
+    _, tuned_models, searches = tune_models(
         X_train, y_train, random_state=random_state, quick=quick
-    )
+)
 
     rows, tuned_details = [], {}
     # Baseline measurements use fresh estimators; tuning itself never sees test data.
@@ -49,17 +51,21 @@ def run_benchmark(output_root="reports", quick=False, random_state=42):
     importance.to_csv(results_dir / "feature_importances.csv", index=False)
     top_sets = {
         name: set(importance.nlargest(10, name)["feature"])
-        for name in tuned_models if name in importance.columns
+        for name in tuned_models
+        if name in importance.columns
     }
     overlap_rows = []
-    for a in top_sets:
-        for b in top_sets:
+    for a, features_a in top_sets.items():
+        for b, features_b in top_sets.items():
             if a < b:
-                overlap_rows.append({
-                    "model_a": a, "model_b": b,
-                    "shared_top10_count": len(top_sets[a] & top_sets[b]),
-                    "shared_features": "; ".join(sorted(top_sets[a] & top_sets[b])),
-                })
+                overlap_rows.append(
+                    {
+                        "model_a": a,
+                        "model_b": b,
+                        "shared_top10_count": len(features_a & features_b),
+                        "shared_features": "; ".join(sorted(features_a & features_b)),
+                    }
+                )
     pd.DataFrame(overlap_rows).to_csv(results_dir / "top_feature_overlap.csv", index=False)
 
     search_meta = {
@@ -71,9 +77,14 @@ def run_benchmark(output_root="reports", quick=False, random_state=42):
         for name, search in searches.items()
     }
     metadata = {
-        "random_state": random_state, "test_size": 0.2, "cv_folds": 5,
-        "quick_mode": quick, "n_train": len(X_train), "n_test": len(X_test),
-        "n_features": len(features), "positive_class": "malignant",
+        "random_state": random_state,
+        "test_size": 0.2,
+        "cv_folds": 5,
+        "quick_mode": quick,
+        "n_train": len(X_train),
+        "n_test": len(X_test),
+        "n_features": len(features),
+        "positive_class": "malignant",
         "python_version": platform.python_version(),
         "scikit_learn_version": sklearn.__version__,
         "xgboost_version": xgboost.__version__,
@@ -86,24 +97,44 @@ def run_benchmark(output_root="reports", quick=False, random_state=42):
 
     winner = metrics[metrics.variant == "tuned"].sort_values("roc_auc", ascending=False).iloc[0]
     report = [
-        "# Ensemble Methods — Experiment Report", "",
-        "> Generated from the current run. Educational use only; not a diagnostic tool.", "",
-        "## Tuned model results", "",
-        metrics[metrics.variant == "tuned"].round(4).to_markdown(index=False), "",
-        "## Hyperparameter search", "",
-        "```json", json.dumps(search_meta, indent=2), "```", "",
-        "## Conclusion", "",
-        f"On this split, **{winner['model']}** achieved the highest test ROC-AUC "
-        f"({winner['roc_auc']:.4f}). This is a dataset- and split-specific observation, "
-        "not evidence that the model is universally best.", "",
-        "Compare F1 and malignant-class recall alongside ROC-AUC. Inspect the train-test "
-        "gap for overfitting and the training-time plot for practical cost. Random Forest "
-        "uses bagging to reduce variance; Gradient Boosting and XGBoost build trees "
-        "sequentially. Feature-importance agreement is summarized in the exported CSV.", "",
-        "## Limitations", "",
-        "One dataset and one held-out split do not establish generalization across datasets. "
-        "Feature importance is not causal evidence, and this project does not establish "
-        "clinical validity.", "",
+        "# Ensemble Methods — Experiment Report",
+        "",
+        "> Generated from the current run. Educational use only; not a diagnostic tool.",
+        "",
+        "## Tuned model results",
+        "",
+        metrics[metrics.variant == "tuned"].round(4).to_markdown(index=False),
+        "",
+        "## Hyperparameter search",
+        "",
+        "```json",
+        json.dumps(search_meta, indent=2),
+        "```",
+        "",
+        "## Conclusion",
+        "",
+              (
+    "On this split, **"
+    f"{winner['model']}** achieved the highest test ROC-AUC "
+    f"({winner['roc_auc']:.4f}). This is a dataset- and split-specific observation, "
+    "not evidence that the model is universally best."
+),
+"",
+(
+    "Compare F1 and malignant-class recall alongside ROC-AUC. Inspect the train-test "
+    "gap for overfitting and the training-time plot for practical cost. Random Forest "
+    "uses bagging to reduce variance; Gradient Boosting and XGBoost build trees "
+    "sequentially. Feature-importance agreement is summarized in the exported CSV."
+),
+"",
+"## Limitations",
+"",
+(
+    "One dataset and one held-out split do not establish generalization across datasets. "
+    "Feature importance is not causal evidence, and this project does not establish "
+    "clinical validity."
+),
+"",
     ]
     (root / "final_report.md").write_text("\n".join(report), encoding="utf-8")
     return metrics, metadata

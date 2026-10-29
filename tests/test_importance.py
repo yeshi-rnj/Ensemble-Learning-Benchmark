@@ -1,6 +1,6 @@
 from ensemble_benchmark.data import load_data
-from ensemble_benchmark.models import build_models
 from ensemble_benchmark.importance import compare_importances
+from ensemble_benchmark.models import build_models
 
 
 def test_feature_importance_dimensions():

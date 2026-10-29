@@ -1,5 +1,6 @@
 """Baseline model definitions."""
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from xgboost import XGBClassifier
 
 
@@ -7,14 +8,18 @@ def build_models(random_state: int = 42):
     """Create fresh baseline estimators with reproducible seeds."""
     return {
         "Random Forest": RandomForestClassifier(
-            n_estimators=100, random_state=random_state, n_jobs=-1,
-            class_weight=None
+            n_estimators=100, random_state=random_state, n_jobs=-1, class_weight=None
         ),
         "Gradient Boosting": GradientBoostingClassifier(random_state=random_state),
         "XGBoost": XGBClassifier(
-            n_estimators=100, max_depth=3, learning_rate=0.1,
-            objective="binary:logistic", eval_metric="logloss",
-            random_state=random_state, n_jobs=2, tree_method="hist"
+            n_estimators=100,
+            max_depth=3,
+            learning_rate=0.1,
+            objective="binary:logistic",
+            eval_metric="logloss",
+            random_state=random_state,
+            n_jobs=2,
+            tree_method="hist",
         ),
     }
 

@@ -1,5 +1,7 @@
 """Command-line interface."""
+
 import argparse
+
 from .benchmarking import run_benchmark
 
 

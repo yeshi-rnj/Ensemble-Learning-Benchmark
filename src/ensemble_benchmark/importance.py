@@ -1,4 +1,5 @@
 """Feature importance extraction and cross-model rank comparison."""
+
 import pandas as pd
 
 
@@ -8,10 +9,14 @@ def compare_importances(models, feature_names):
     for name, model in models.items():
         if not hasattr(model, "feature_importances_"):
             continue
-        tables.append(pd.DataFrame({
-            "feature": feature_names,
-            name: model.feature_importances_,
-        }))
+        tables.append(
+            pd.DataFrame(
+                {
+                    "feature": feature_names,
+                    name: model.feature_importances_,
+                }
+            )
+        )
     if not tables:
         return pd.DataFrame(columns=["feature"])
     merged = tables[0]

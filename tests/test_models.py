@@ -6,6 +6,7 @@ def test_expected_models_exist_and_fit():
     assert set(models) == {"Random Forest", "Gradient Boosting", "XGBoost"}
     # Smoke-test fitting on a small deterministic synthetic dataset.
     from sklearn.datasets import make_classification
+
     X, y = make_classification(n_samples=60, n_features=6, random_state=42)
     for model in models.values():
         model.fit(X, y)
